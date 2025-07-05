@@ -1,0 +1,43 @@
+---@alias LoveEvent
+---| "directorydropped"
+---| "filedropped"
+---| "focus"
+---| "gamepadaxis"
+---| "gamepadpressed"
+---| "gamepadreleased"
+---| "joystickadded"
+---| "joystickaxis"
+---| "joystickhat"
+---| "joystickpressed"
+---| "joystickreleased"
+---| "joystickremoved"
+---| "keypressed"
+---| "keyreleased"
+---| "mousefocus"
+---| "mousemoved"
+---| "mousepressed"
+---| "mousereleased"
+---| "quit"
+---| "resize"
+---| "textedited"
+---| "textinput"
+---| "threaderror"
+---| "touchmoved"
+---| "touchpressed"
+---| "touchreleased"
+---| "visible"
+---| "wheelmoved"
+---| "windowclose"
+---| "windowfocus"
+---| "windowresized"
+---| "windowmoved"
+---| "wm"
+---| "scenechange" -- here and below are custom events
+
+---Wrapper for love event pushing
+---@param event LoveEvent
+---@param ... any
+function PushEvent(event, ...)
+---@diagnostic disable-next-line: param-type-mismatch
+    love.event.push(event, ...)
+end

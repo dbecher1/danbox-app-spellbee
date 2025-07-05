@@ -6,43 +6,48 @@ local Input = require('input')
 local Globals = require('util.globals')
 local UI = require('ui.prelude')
 local json = require('util.json')
+local Thread = require('network.thread')
 
 function loading.load()
-    loading_private.debugText = UI.Text:new({
+    loading_private.text = UI.Text:new({
         content = 'LOADING...'
     })
 end
-
 function loading.onEnter()
-    print('loading: onEnter')
-    local t = love.thread.newThread('network/request_code.lua')
-    t:start(Globals.GameID)
+    loading_private.req_thread = Thread:new({
+        name = 'request_code',
+        path = 'network/request_code.lua'
+    }):start(Globals.GameID)
 end
 
 function loading.onLeave()
-    print('loading: onLeave')
+    if loading_private.req_thread:is_running() then
+        loading_private.req_thread:stop()
+    end
 end
 
 function loading.keypressed()
-
+    if Input.ESC() then
+        PushEvent('scenechange', 'MAIN_MENU')
+    end
 end
 
 function loading.update(dt)
-    local result = love.thread.getChannel('generate_code'):pop()
+    local result = loading_private.req_thread:receive()
     if result then
-        -- do something to handle server error here!!
-        local body = json.decode(result.body)
-        -- Util.print_r(body)
-        -- print('Code: ' .. body.code)
-        -- print('Status: ' .. result.status)
-        love.event.push('scenechange', 'LOBBY', body.code)
+        if result.status == 'ERROR' then
+            -- server error
+            --loading_private.error_text:activate()
+            PushEvent('scenechange', 'ERROR', 'Server timeout')
+        else
+            local body = json.decode(result.body)
+            PushEvent('scenechange', 'LOBBY', body.code)
+        end
     end
 end
 
 function loading.draw()
-    if Globals.Debug then
-        loading_private.debugText:draw()
-    end
+    loading_private.text:draw()
 end
 
 return loading

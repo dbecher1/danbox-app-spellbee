@@ -1,6 +1,8 @@
 local websocket = require('network.websocket')
 local json = require("util.json")
 local Globals = require('util.globals')
+local print_r = require('util.print_r').print_r
+local timer = require('love.timer')
 
 local id, roomcode = ...
 local message = 0
@@ -14,7 +16,7 @@ local phx = {
 
 function phx.payloadFormat(payload)
     if #payload == 0 then
-        return nil
+        --return nil
     end
     local out = '{'
     local comma = false
@@ -49,8 +51,8 @@ function phx.msg(e, args)
     elseif e == phx.event then
         out.joinref = 'null'
         out.event = '"'..args.name..'"'
-        out.payload = '{}'
-        --out.payload = phx.payloadFormat(args.payload or {}) or '{}'
+        --out.payload = '{}'
+        out.payload = phx.payloadFormat(args.payload or {}) or '{}'
     else
         out.joinref = 'null'
         out.topic = '"phoenix"'
@@ -66,6 +68,7 @@ end
 local client = websocket.new(Globals.HOST, Globals.PORT, Globals.PATH)
 
 function client:onmessage(msg)
+    -- print_r(msg)
     local decode = json.decode(msg)
     if decode[4] == 'player_join' then
         love.thread.getChannel('from-network'):push({
@@ -76,6 +79,12 @@ function client:onmessage(msg)
         love.thread.getChannel('from-network'):push({
             event = 'player_leave',
             username = decode[5].username
+        })
+    elseif decode[4] == 'words' then
+        -- print_r(decode)
+        love.thread.getChannel('from-network'):push({
+            event = 'words',
+            words = decode[5]
         })
     else
         -- print('Unhandled message: ', msg)
@@ -105,14 +114,27 @@ while run do
     local e = love.thread.getChannel('to-network'):pop()
     if e then
         -- print(e)
-        if e == 'quit' then
+        if e == 'stop' then
             run = false
             client:close()
         elseif e == 'heartbeat' then
             -- print('Heartbeat sent')
             client:send(phx.msg())
+        elseif type(e) == 'table' then
+            if e.event == 'getwords' then
+                local msg = phx.msg(phx.event, {
+                    name = 'getwords',
+                    payload = {
+                        player_count = e.player_count,
+                        grade = e.grade,
+                    }
+                })
+                print(msg)
+                client:send(msg)
+            end
         end
     end
+    timer.sleep(0.005)
 end
 
 print('network thread exited')

@@ -1,16 +1,16 @@
 local UI = {}
 
 local button = require('ui.button')
-local pallet = require('ui.pallet')
 local text = require('ui.text')
 local align = require('ui.align')
 local flexBox = require('ui.flexbox')
+local color = require('ui.color')
 
 UI.Button = button
-UI.Pallet = pallet
 UI.Text = text
 UI.Align = align
 UI.FlexBox = flexBox
+UI.Color = color
 
 UI.ButtonColorVariant = button.colorVariant
 UI.FlexDirection = flexBox.Direction

@@ -1,12 +1,21 @@
 local Util = require('util.mod')
 local Text = require('ui.text')
 local Align = require('ui.align')
+local Component = require('ui.component')
 
 local button_private = {}
-local Button = {}
+--local Button = setmetatable({}, {__index = Component})
+
+---@class Button: Component
+---@field color ColorVariant
+---@field pressed boolean
+---@field focused boolean
+---@field selected boolean
+---@field textElements Text[]
+---@field action function?
+local Button = Util.inherit(Component)
 
 -- probably a more elegant way to do this...
--- 
 
 local colorsRef = {'Blue', 'Green', 'Red', 'Yellow'}
 
@@ -36,52 +45,10 @@ function Button.load()
     button_private.arrow_yellow_right = love.graphics.newImage('assets/sprites/ui/arrow/Yellow/arrow_basic_e.png')
 end
 
----@class ButtonArgs
----@field color ColorVariant?
----@field x number?
----@field y number?
----@field w number?
----@field h number?
----@field alignX AlignX?
----@field alignY AlignY?
----@field position {number: number, number: number}?
----@field size {number: number, number:number}?
----@field text [TextArgs]?
-
----@class Button
----@field color ColorVariant
----@field x number
----@field y number
----@field w number
----@field h number
----@field alignX AlignX
----@field alignY AlignY
----@field pressed boolean
----@field focused boolean
----@field textElements table
----@param b ButtonArgs
 function Button:new(b)
-    b = b or {}
-    setmetatable(b, self)
-    self.__index = self
-    b.color = b.color or Button.colorVariant.BLUE
-    if b.position then
-        b.x = b.position[1]
-        b.y = b.position[2]
-        b.position = nil
-    else
-        b.x = b.x or 0
-        b.y = b.y or 0
-    end
+    b = Component.new(self, b, 'button')
 
-    if b.size then
-        b.w = b.size[1]
-        b.h = b.size[2]
-        b.size = nil
-    else
-        b.w = b.w or 200
-        b.h = b.h or 150
-    end
+    b.color = b.color or Button.colorVariant.BLUE
 
     b.pressed = false
     b.textElements = {}
@@ -97,23 +64,22 @@ function Button:new(b)
     b.selected = b.selected or false
     b.action = b.action or nil
 
-    b.alignX = b.alignX or Align.X.LEFT
-    b.alignY = b.alignY or Align.Y.TOP
-    b.id = b.id or ''
-    b.active = b.active or true
     return b
 end
 
 function Button:find(id)
     if self.id == id then return self end
     for _, elem in pairs(self.textElements) do
-        local try = elem.find(id)
-        if try then return try end
+---@diagnostic disable-next-line: undefined-field
+        if elem.find then
+---@diagnostic disable-next-line: undefined-field
+            local try = elem:find(id)
+            if try then return try end
+        end
     end
     return nil
 end
 
----@param t Text
 --- The position of text elements will be RELATIVE to the position of the button!!
 function Button:addText(t)
     table.insert(self.textElements, t)
@@ -124,11 +90,12 @@ function Button:getDimensions()
     return button_private[sprite]:getDimensions()
 end
 
-function Button:update()
+function Button:update(dt)
 
 end
 
 function Button:draw(offset, parentDim)
+    if not self.active then return end
     offset = offset or {0, 0}
     local sprite = 'button' .. colorsRef[self.color]
     if self.focused then
@@ -142,7 +109,8 @@ function Button:draw(offset, parentDim)
         boundsW = parentDim[1]
         boundsH = parentDim[2]
     else
-        boundsW, boundsH = State.screenSize()
+        --boundsW, boundsH = State.screenSize()
+        assert(false, 'FIX ME')
     end
 
     local pos = {
@@ -170,6 +138,7 @@ function Button:draw(offset, parentDim)
     )
 
     for _, t in pairs(self.textElements) do
+---@diagnostic disable-next-line: undefined-field
         t:draw(
             pos,
             {pw, ph}

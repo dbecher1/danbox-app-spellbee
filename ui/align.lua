@@ -1,4 +1,7 @@
 
+---@class Align
+---@field AlixnX AlignX
+---@field AlignY AlignY
 local align = {}
 
 ---@enum AlignX

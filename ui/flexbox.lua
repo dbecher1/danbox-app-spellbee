@@ -1,7 +1,16 @@
-local FlexBox = {}
+local Component = require('ui.component')
 local Align = require('ui.align')
 local Text = require('ui.text')
-local print_r = require('util.print_r').print_r
+local Util = require('util.mod')
+
+---@class FlexBox: Component
+---@field gap number
+---@field elements Component[]
+---@field direction FlexDirection
+---@field dimensions [number, number]
+---@field selectedElement number
+---@field receiveInput boolean
+local FlexBox = Util.inherit(Component)
 
 ---@enum FlexDirection
 local Direction = {
@@ -11,25 +20,16 @@ local Direction = {
 
 FlexBox.Direction = Direction
 
----@class FlexBox The elements contained within must satisfy the following: have a getDimensions method, have a draw method with arguments offset and parentDim
+--The elements contained within must satisfy the following: have a getDimensions method, have a draw method with arguments offset and parentDim
 function FlexBox:new(fb)
-    fb = fb or {}
-    setmetatable(fb, self)
-    self.__index = self
+    fb = Component.new(self, fb, 'flexbox')
+
     fb.gap = fb.gap or 1
     fb.elements = fb.elements or {}
-    if fb.position then
-        fb.x = fb.position[1]
-        fb.y = fb.position[2]
-        fb.position = nil
-    else
-        fb.x = fb.x or 0
-        fb.y = fb.y or 0
-    end
-    fb.alignX = fb.alignX or Align.X.LEFT
-    fb.alignY = fb.alignY or Align.Y.TOP
+
     fb.direction = fb.direction or Direction.HORIZONTAL
     fb.dimensions = {0, 0}
+
     if #fb.elements > 0 then
         fb.selectedElement = 1
         fb.elements[1].selected = true
@@ -37,9 +37,7 @@ function FlexBox:new(fb)
         fb.selectedElement = -1
     end
     fb.receiveInput = fb.receiveInput or false
-    fb.id = fb.id or ''
     fb.calculateDimensions(fb)
-    fb.active = fb.active or true
     return fb
 end
 
@@ -48,15 +46,16 @@ end
 function FlexBox:find(id)
     if self.id == id then return self end
     for i, elem in ipairs(self.elements) do
+---@diagnostic disable-next-line: undefined-field
         local try = elem.find(id)
         if try then return try, i end
     end
     return nil
 end
 
-function FlexBox:propagateInput(input, inputType)
+local function propagateInput(self, input, inputType)
     if self.selectedElement < 0 then return end
-    if input.ACTION then
+    if input == 'ACTION' then
         -- do something with the button and return
         -- maybe reset input state? too?
         if self.elements[self.selectedElement].action then
@@ -68,24 +67,24 @@ function FlexBox:propagateInput(input, inputType)
     local lastSelected = self.selectedElement
     if inputType == 'key' then
         if self.direction == Direction.HORIZONTAL then
-            if input.RIGHT and not input.LEFT then
+            if input == 'RIGHT' then
                 self.selectedElement = self.selectedElement + 1
                 if self.selectedElement > len then
                     self.selectedElement = 1
                 end
-            elseif input.LEFT and not input.RIGHT then
+            elseif input == 'LEFT' then
                 self.selectedElement = self.selectedElement - 1
                 if self.selectedElement == 0 then
                     self.selectedElement = len
                 end
             end
         elseif self.direction == Direction.VERTICAL then
-            if input.DOWN and not input.UP then
+            if input == 'DOWN' then
                 self.selectedElement = self.selectedElement + 1
                 if self.selectedElement > len then
                     self.selectedElement = 1
                 end
-            elseif input.UP and not input.DOWN then
+            elseif input == 'UP' then
                 self.selectedElement = self.selectedElement - 1
                 if self.selectedElement == 0 then
                     self.selectedElement = len
@@ -97,8 +96,10 @@ function FlexBox:propagateInput(input, inputType)
     self.elements[self.selectedElement].selected = true
 end
 
-function FlexBox:getDimensions()
-    return self.dimensions[1], self.dimensions[2]
+function FlexBox:propagateInput(input_, inputType)
+    for _, input in ipairs(input_) do
+        propagateInput(self, input, inputType)
+    end
 end
 
 -- Caches size; helpful for handling mouse events and alignment modes
@@ -190,6 +191,7 @@ function FlexBox:draw(offset, parentDim)
         drawPos[2] = drawPos[2] + boundsH - self.dimensions[2]
     end
     for _, elem in pairs(self.elements) do
+---@diagnostic disable-next-line: undefined-field
         elem:draw(drawPos, self.dimensions)
         local ew, eh = elem:getDimensions()
         if self.direction == Direction.HORIZONTAL then

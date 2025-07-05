@@ -1,11 +1,20 @@
----@diagnostic disable: undefined-doc-name
 local Util = require('util.mod')
 local Align = require('ui.align')
+local Component = require('ui.component')
+local Color = require('ui.color')
 
 local text_private = {
     Font = {}
 }
-local Text = {}
+
+---@class Text: Component
+---@field size TextSize
+---@field inner_state love.Text
+---@field shadow Shadow
+---@field borderSize number
+---@
+
+local Text = Util.inherit(Component)
 local font_path = 'assets/fonts/Kenney Future.ttf'
 
 ---@enum TextSize
@@ -16,11 +25,21 @@ local TextSize = {
     XL = 4,
 }
 
+---@enum Shadow
+local Shadow = {
+    None = 0,
+    Small = 1,
+    Medium = 2,
+    Large = 3,
+    XL = 4,
+}
+
 Text.Size = TextSize
+Text.Shadow = Shadow
 
 function Text.load()
     text_private.Font = {
-        love.graphics.newFont(font_path, 12),
+        love.graphics.newFont(font_path, 16),
         love.graphics.newFont(font_path, 24),
         love.graphics.newFont(font_path, 48),
         love.graphics.newFont(font_path, 96),
@@ -30,60 +49,28 @@ function Text.load()
     text_private.shadowShader = love.graphics.newShader('assets/shaders/text_shadow.glsl')
 end
 
----@alias Color {number: number, number:number, number: number, number:number}
-
----@class TextArgs
----@field x number?
----@field y number?
----@field size TextSize?
----@field position {number: number, number: number}?
----@field color Color?
----@field content string?
----@field alignX AlignX?
----@field alignY AlignY?
-
----@class Text
----@field x number If centered, acts as an offset
----@field y number
----@field alignX AlignX
----@field alignY AlignY
----@field inner_state love.graphics.Text
----@field color Color
----@field draw function
----@param t TextArgs
----@return Text
 function Text:new(t)
-    t = t or {}
-    setmetatable(t, self)
-    self.__index = self
-    if t.position then
-        t.x = t.position[1]
-        t.y = t.position[2]
-        t.position = nil
-    else
-        t.x = t.x or 0
-        t.y = t.y or 0
-    end
+    t = Component.new(self, t, 'text')
+
     local size = t.size or TextSize.Medium
     t.size = nil
-    local color = t.color or {1, 1, 1, 1}
-    --t.color = nil
+
+    if t.color then
+        if type(t.color) == 'string' and Color[t.color] then
+            t.color = Color[t.color]
+        end
+    else
+        t.color = Color.white
+    end
+
     local content = t.content or ''
     t.content = nil
+
     t.inner_state = love.graphics.newText(text_private.Font[size], content)
-    t.alignX = t.alignX or Align.X.LEFT
-    t.alignY = t.alignY or Align.Y.TOP
-    local alignXStr = 'left'
-    if t.alignX == Align.X.CENTER then
-        alignXStr = 'center'
-    elseif t.alignX == Align.X.RIGHT then
-        alignXStr = 'right'
-    end
-    t.shadowSize = t.shadowSize or 0
+
+    t.shadow = t.shadow or Shadow.None
     t.borderSize = t.borderSize or 0
-    t.id = t.id or ''
-    t.active = t.active or true
-    --t.inner_state:setf({color, content}, 500, alignXStr)
+
     return t
 end
 
@@ -95,15 +82,19 @@ end
 
 ---@param content string
 function Text:setContent(content)
+    if type(content) ~= 'string' then
+        content = tostring(content)
+    end
     self.inner_state:set(content)
 end
 
+---@diagnostic disable-next-line: duplicate-set-field
 function Text:getDimensions()
     return self.inner_state:getDimensions()
 end
 
----@param offset {number: number, number: number}? This will be the position of the parent UI element, if exists
----@param parentDim {number: number, number: number}? w, h
+---@param offset [number, number]? This will be the position of the parent UI element, if exists
+---@param parentDim [number, number]? w, h
 function Text:draw(offset, parentDim)
     if not self.active then return end
     offset = offset or {0, 0}
@@ -111,10 +102,11 @@ function Text:draw(offset, parentDim)
         x = self.x + offset[1],
         y = self.y + offset[2],
     }
+    local r, g, b, a = love.graphics.getColor()
     love.graphics.setColor(self.color or {1, 1, 1})
     --love.graphics.setColor{1, 1, 1}
     local boundsW, boundsH
-    -- TODO: shadow
+
     if parentDim then
         boundsW = parentDim[1]
         boundsH = parentDim[2]
@@ -140,14 +132,16 @@ function Text:draw(offset, parentDim)
         drawPos.y = drawPos.y + boundsH - selfSizeH
     end
 
-    if self.shadowSize > 0 then
+    if self.shadow > 0 then
         love.graphics.setShader(text_private.shadowShader)
-        text_private.shadowShader:send('shadowSize', self.shadowSize);
+        text_private.shadowShader:send('shadowSize', self.shadow);
         love.graphics.draw(self.inner_state, math.floor(drawPos.x), math.floor(drawPos.y))
         love.graphics.setShader()
     end
 
     love.graphics.draw(self.inner_state, math.floor(drawPos.x), math.floor(drawPos.y))
+
+    love.graphics.setColor(r, g, b, a)
 end
 
 return Text

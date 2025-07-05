@@ -2,19 +2,25 @@ local State = require('state')
 local UI = require('ui.prelude')
 local Input = require('input')
 local Globals = require('util.globals')
+local tts = require('util.tts')
+require('event')
+
+love.handlers = love.handlers
 
 function love.load()
     math.randomseed(os.time())
     UI.load()
     State.load()
     Globals.load()
+    tts.load()
 end
 
-function love.handlers.scenechange(scene, arg)
-    State.handleSceneChange(scene, arg)
+function love.handlers.scenechange(scene, arg1, arg2)
+    State.handleSceneChange(scene, arg1, arg2)
 end
 
 function love.update(dt)
+    tts.update()
     State.update(dt)
 end
 
@@ -30,7 +36,7 @@ end
 
 function love.draw()
     love.graphics.setCanvas(Globals.BackBuffer)
-    love.graphics.clear(UI.Pallet.activePallet.clearColor)
+    love.graphics.clear(UI.Color.lightblue)
 
     State.draw()
 

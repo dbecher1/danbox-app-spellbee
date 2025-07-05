@@ -17,13 +17,12 @@ function menu.load()
         alignX = UI.Align.X.CENTER,
         y = 50,
         size = UI.Text.Size.XL,
-        color = {1, 1, 0.2},
-        shadowSize = 3.0,
+        color = UI.Color.yellow,
+        shadow = UI.Text.Shadow.Large,
     }))
     table.insert(menu_private.Elements, UI.FlexBox:new({
         receiveInput = true,
-        alignY = UI.Align.Y.MIDDLE,
-        alignX = UI.Align.X.CENTER,
+        alignCentered = true,
         y = 100,
         gap = 3,
         direction = UI.FlexDirection.VERTICAL,
@@ -36,12 +35,11 @@ function menu.load()
                         content = 'PLAY',
                         alignY = UI.Align.Y.MIDDLE,
                         alignX = UI.Align.X.CENTER,
-                        shadowSize = 1.0,
+                        shadow = UI.Text.Shadow.Small,
                     },
                 },
                 action = function()
-                    print('PLAY PRESSED')
-                    love.event.push('scenechange', 'LOADING')
+                    PushEvent('scenechange', 'LOADING')
                 end
             }),
             UI.Button:new({
@@ -51,7 +49,7 @@ function menu.load()
                         content = 'SETTINGS',
                         alignY = UI.Align.Y.MIDDLE,
                         alignX = UI.Align.X.CENTER,
-                        shadowSize = 1.0,
+                        shadow = UI.Text.Shadow.Small,
                     },
                 },
                 action = function()
@@ -65,32 +63,29 @@ function menu.load()
                         content = 'QUIT',
                         alignY = UI.Align.Y.MIDDLE,
                         alignX = UI.Align.X.CENTER,
-                        shadowSize = 1.0,
+                        shadow = UI.Text.Shadow.Small,
                     },
                 },
                 action = function()
-                    print('QUIT PRESSED')
+                    PushEvent('quit')
                 end
             })
         }
     }))
 end
 
-function menu.onEnter()
-    print('main menu: onStart')
-end
-
-function menu.onLeave()
-    print('main menu: onLeave')
-end
-
 function menu.keypressed()
     if Globals.Debug then
         -- Util.print_r(Input)
     end
+    if Input.ESC() then
+        --love.event.push('quit')
+        PushEvent('quit')
+        return
+    end
     for _, elem in pairs(menu_private.Elements) do
-        if elem.receiveInput then
-            elem:propagateInput(Input, 'key')
+        if elem.receiveInput and elem.propagateInput then
+            elem:propagateInput(Input.State({ignore = {'ESC'}}), 'key')
         end
     end
 end
