@@ -10,7 +10,7 @@ local Util = require('util.mod')
 ---@field dimensions [number, number]
 ---@field selectedElement number
 ---@field receiveInput boolean
-local FlexBox = Util.inherit(Component)
+local FlexBox = Inherit(Component)
 
 ---@enum FlexDirection
 local Direction = {

@@ -1,4 +1,4 @@
----@diagnostic disable: deprecated
+---@diagnostic disable: deprecated, param-type-mismatch
 --[[
 websocket client pure lua implement for love2d
 by flaribbit

@@ -1,11 +1,10 @@
+require('util.mod')
+require('event')
 local State = require('state')
 local UI = require('ui.prelude')
 local Input = require('input')
 local Globals = require('util.globals')
 local tts = require('util.tts')
-require('event')
-
-love.handlers = love.handlers
 
 function love.load()
     math.randomseed(os.time())

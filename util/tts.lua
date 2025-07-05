@@ -1,33 +1,51 @@
---local ffi = require('util.tts.engine.espeak')
 local tts_engine = require('util.tts.engine')
-local tts = {}
-local tts_ = {}
 local Thread = require('network.thread')
+
+---@class TTS The interface that controls the underlying text-to-speech engine
+---@field private thread Thread
+---@field private speaking boolean
+---@field private callback_queue table<string, function>
+local tts = {}
 
 function tts.load()
 	tts_engine.init()
-	tts_.thread = Thread:new({
+	tts.thread = Thread:new({
 		path = 'util/tts/tts_thread.lua',
 		name = 'tts'
 	})
-	tts_.thread:new_channel('cb')
-	tts_.thread:start()
+	tts.thread:new_channel('cb')
+	tts.thread:start()
 
-	tts_.callback_queue = {}
-	tts_.speaking = false
+	tts.callback_queue = {}
+	tts.speaking = false
 end
 
+---Sends text to the engine to speak
+---@param data string
 function tts.speak(data)
-	tts_.thread:send(data)
+	tts.thread:send(data)
 end
 
+---Sends text to the engine to speak, calling a callback function on completion of the speech
+---@param data string
+---@param fn function
+function tts.speak_then(data, fn)
+	tts.callback_queue[data] = fn
+	tts.thread:send(data, 'cb')
+end
+
+---Sends an arbitrary amount of phrases to the engine. The engine is configured to have short pauses in between each phrase, so this is ideal for sentences.
+---@param ... string
 function tts.speak_many(...)
 	local arg = {...}
-	for i, data in ipairs(arg) do
+	for _, data in ipairs(arg) do
 		tts.speak(data)
 	end
 end
 
+---Sends an arbitrary amount of phrases to the engine, calling a callback function after the final phrase
+---@param fn function
+---@param ... string
 function tts.after_speak_many(fn, ...)
 	local arg = {...}
 	for i, data in ipairs(arg) do
@@ -39,29 +57,25 @@ function tts.after_speak_many(fn, ...)
 	end
 end
 
--- Similar to the above, but enacts a callback function when the speaking is done
-function tts.speak_then(data, fn)
-	tts_.callback_queue[data] = fn
-	tts_.thread:send_on('cb', data)
-end
-
 function tts.update()
-	local speaking = tts_.thread:receive()
+	local speaking = tts.thread:receive()
 	if speaking ~= nil then
-		tts_.speaking = speaking
+		tts.speaking = speaking
 	end
-	local e = tts_.thread:receive_on('cb')
+	local e = tts.thread:receive('cb')
 	if e then
 		-- call the function and then remove the entry
-		if tts_.callback_queue[e] then
-			tts_.callback_queue[e]()
+		if tts.callback_queue[e] then
+			tts.callback_queue[e]()
 		end
-		tts_.callback_queue[e] = nil
+		tts.callback_queue[e] = nil
 	end
 end
 
+---Returns true if the engine is currently speaking
+---@return boolean
 function tts.is_speaking()
-	return tts_.speaking
+	return tts.speaking
 end
 
 return tts

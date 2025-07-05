@@ -13,7 +13,7 @@ local button_private = {}
 ---@field selected boolean
 ---@field textElements Text[]
 ---@field action function?
-local Button = Util.inherit(Component)
+local Button = Inherit(Component)
 
 -- probably a more elegant way to do this...
 

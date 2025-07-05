@@ -1,11 +1,8 @@
 
-local util = {}
-local uuid = require('util.uuid')
-util.print_r = require('util.print_r').print_r
-util.uuid = uuid.uuid
+Uuid = require('util.uuid').uuid
+Print_r = require('util.print_r').print_r
+Input = require('input')
 
-function util.inherit(parent)
+function Inherit(parent)
     return setmetatable({}, {__index = parent})
 end
-
-return util

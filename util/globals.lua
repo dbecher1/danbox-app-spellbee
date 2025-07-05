@@ -1,7 +1,5 @@
 -- variables defined on a global level in the application are defined here so as to not pollute the global table
 
-local Util = require('util.mod')
-
 local env = {
     Debug = true,
 
@@ -12,7 +10,7 @@ local env = {
 
 function env.load()
     env.BackBuffer = love.graphics.newCanvas()
-    env.GameID = Util.uuid()
+    env.GameID = Uuid()
 end
 
 return env

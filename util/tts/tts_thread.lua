@@ -1,4 +1,3 @@
---local ffi = require('util.tts.engine.espeak')
 local tts_engine = require('util.tts.engine')
 local timer = require('love.timer')
 

@@ -14,7 +14,7 @@ local text_private = {
 ---@field borderSize number
 ---@
 
-local Text = Util.inherit(Component)
+local Text = Inherit(Component)
 local font_path = 'assets/fonts/Kenney Future.ttf'
 
 ---@enum TextSize
