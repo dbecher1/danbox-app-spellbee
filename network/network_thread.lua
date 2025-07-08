@@ -1,8 +1,8 @@
 local websocket = require('network.websocket')
 local json = require("util.json")
 local Globals = require('util.globals')
-local print_r = require('util.print_r').print_r
 local timer = require('love.timer')
+local print_r = require('util.print_r').print_r
 
 local id, roomcode = ...
 local message = 0
@@ -70,21 +70,30 @@ local client = websocket.new(Globals.HOST, Globals.PORT, Globals.PATH)
 function client:onmessage(msg)
     -- print_r(msg)
     local decode = json.decode(msg)
-    if decode[4] == 'player_join' then
+    local e = decode[4]
+    if e == 'player_join' then
+        local username = decode[5].username
         love.thread.getChannel('from-network'):push({
             event = 'player_join',
-            username = decode[5].username
+            username = username
         })
-    elseif decode[4] == 'player_leave' then
+    elseif e == 'player_leave' then
+        local username = decode[5].username
         love.thread.getChannel('from-network'):push({
             event = 'player_leave',
-            username = decode[5].username
+            username = username
         })
-    elseif decode[4] == 'words' then
-        -- print_r(decode)
+    elseif e == 'words' then
+        local words = decode[5].words
         love.thread.getChannel('from-network'):push({
             event = 'words',
-            words = decode[5]
+            words = words
+        })
+    elseif e == 'guess' then
+        -- print(decode[5].guess)
+        love.thread.getChannel('from-network'):push({
+            event = 'guess',
+            guess = decode[5].guess
         })
     else
         -- print('Unhandled message: ', msg)
@@ -120,6 +129,10 @@ while run do
         elseif e == 'heartbeat' then
             -- print('Heartbeat sent')
             client:send(phx.msg())
+        elseif e == 'gamestart' then
+            client:send(phx.msg(phx.event, {
+                name = 'gamestart'
+            }))
         elseif type(e) == 'table' then
             if e.event == 'getwords' then
                 local msg = phx.msg(phx.event, {
@@ -129,7 +142,15 @@ while run do
                         grade = e.grade,
                     }
                 })
-                print(msg)
+                -- print(msg)
+                client:send(msg)
+            elseif e.event == 'turnstart' then
+                local msg = phx.msg(phx.event, {
+                    name = 'turnstart',
+                    payload = {
+                        player = e.player
+                    }
+                })
                 client:send(msg)
             end
         end

@@ -21,7 +21,7 @@ function tts.load()
 end
 
 ---Sends text to the engine to speak
----@param data string
+---@param data any
 function tts.speak(data)
 	tts.thread:send(data)
 end
@@ -32,6 +32,19 @@ end
 function tts.speak_then(data, fn)
 	tts.callback_queue[data] = fn
 	tts.thread:send(data, 'cb')
+end
+
+---Naming things is very hard. This function takes an array of string function tuples, and executes them in turn. The function can be nil for flexibility (if you want a non-callback executed in between two callbacks)
+---@param entries [string, function?][]
+function tts.speak_then_and(entries)
+	for _, entry in ipairs(entries) do
+		local data, fn = unpack(entry)
+		if fn then
+			tts.speak_then(data, fn)
+		else
+			tts.speak(data)
+		end
+	end
 end
 
 ---Sends an arbitrary amount of phrases to the engine. The engine is configured to have short pauses in between each phrase, so this is ideal for sentences.

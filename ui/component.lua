@@ -79,4 +79,10 @@ function Component:set_active(active)
     print(self.id)
 end
 
+function Component:receiveInput()
+    return false
+end
+
+function Component:propagateInput(input, type) end
+
 return Component

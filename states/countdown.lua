@@ -1,89 +1,100 @@
 local UI = require('ui.prelude')
 local tts = require('util.tts')
 local Thread = require('network.thread')
-local print_r = require('util.print_r').print_r
+local StateBase = require('states.state_base')
 
 -- The countdown is cute and silly, but this is also when we populate the word bank
 
 local grade = 5 -- this may be changed in the future, or maybe be made customizable
 
-local countdown_private = {
-    Elements = {},
-}
-local countdown = {}
+---@class Countdown: StateBase
+---@field private number_text Text
+---@field private number integer
+---@field private counter number
+---@field private network_thread Thread?
+---@field private words table?
+local Countdown = Inherit(StateBase)
 
-local function transition()
-    if countdown_private.words == nil then
-        love.event.push('scenechange', 'ERROR', 'Network error')
+---@alias Grades 1|2|3|4|5|6|7|8|9|10|11|12
+---@alias WordBank table<Grades, string[]>
+
+---@private
+function Countdown:transition()
+    if self.words == nil then
+        PushEvent('scenechange', 'ERROR', 'Network error')
         return
     end
     local gamestate = {
-        players = countdown_private.players,
-        network_thread = countdown_private.network_thread,
-        words = countdown_private.words
+        players = self.players,
+        network_thread = self.network_thread,
+        words = self.words
     }
-    love.event.push('scenechange', 'GAMEPLAY_LOOP', gamestate)
+    self.network_thread:send('gamestart')
+    PushEvent('scenechange', 'GAMEPLAY_LOOP', gamestate)
 end
 
-function countdown_private.update_counter()
-    if countdown_private.number > 0 then
-        countdown_private.number_text:setContent(countdown_private.number)
-        tts.speak(countdown_private.number)
+---@private
+function Countdown:update_counter()
+    if self.number > 0 then
+        self.number_text:setContent(self.number)
+        tts.speak(self.number)
     else
         local msg = 'Let us play the game'
-        countdown_private.number_text:setContent(msg)
-        tts.speak_then(msg, transition)
+        self.number_text:setContent(msg)
+        tts.speak_then(msg, function() self:transition() end)
     end
 end
 
-function countdown.load()
-    countdown_private.number_text = UI.Text:new({
+function Countdown:new()
+    local countdown = StateBase.new(self)
+    countdown.number_text = UI.Text:new({
         id = 'countdown-text',
         shadow = UI.Text.Shadow.Large,
         alignCentered = true,
         size = UI.Text.Size.Large,
         color = {1, 0, 0}
     })
-    table.insert(countdown_private.Elements, countdown_private.number_text)
+    table.insert(countdown.Elements, countdown.number_text)
 
-    countdown_private.number = 3
-    countdown_private.counter = 0
+    countdown.number = 3
+    countdown.counter = 0
+    countdown.players = {}
+    self.network_thread = nil
+    return countdown
 end
 
-function countdown.onEnter(players, network_thread)
+---
+---@param players table<string, PlayerState>
+---@param network_thread Thread
+function Countdown:onEnter(players, network_thread)
     -- print_r(network_thread)
-    countdown_private.players = players
-    countdown_private.network_thread = Thread:rehydrate(network_thread)
-    countdown_private.network_thread:send({
+    self.players = players
+    self.network_thread = Thread:rehydrate(network_thread)
+    self.network_thread:send({
         event = 'getwords',
         --player_count = #players,
         player_count = 3,
         grade = grade,
     })
-    countdown_private.update_counter()
+    self:update_counter()
 end
 
-function countdown.update(dt)
-    if countdown_private.number > 0 then
-        countdown_private.counter = countdown_private.counter + dt
-        if countdown_private.counter >= 1 then
-            countdown_private.counter = 0
-            countdown_private.number = countdown_private.number - 1
-            countdown_private.update_counter()
+function Countdown:update(dt)
+    if self.number > 0 then
+        self.counter = self.counter + dt
+        if self.counter >= 1 then
+            self.counter = 0
+            self.number = self.number - 1
+            self:update_counter()
         end
     end
-    local e = countdown_private.network_thread:receive()
+    ---@type {event: string, words: WordBank}
+    local e = self.network_thread:receive()
     if e then
         if e.event == 'words' then
-            countdown_private.words = e.words
+            self.words = e.words
         end
     end
 end
 
-function countdown.draw()
-    for _, elem in pairs(countdown_private.Elements) do
-        elem:draw()
-    end
-end
-
-return countdown
+return Countdown

@@ -8,16 +8,7 @@
 ---@field private custom_channels table<string, love.Channel>
 local Thread = {}
 
----Given a thread name and channel name, creates the names for a new custom channel.
----@param name string
----@param channel string
----@return string
----@return string
-local function create_custom_channel_name(name, channel)
-    local send = 'to-' .. name .. '-' .. channel
-    local rec = 'from-' .. name .. '-' .. channel
-    return send, rec
-end
+local create_channel_name = require('network.channel_name')
 
 function Thread:new(t)
     t = t or {}
@@ -28,8 +19,10 @@ function Thread:new(t)
     assert(t.path, 'Thread must be created with a valid path field')
 
     t.inner_state = love.thread.newThread(t.path)
-    t.send_channel = love.thread.getChannel('to-'..t.name)
-    t.receive_channel = love.thread.getChannel('from-'..t.name)
+    local send, rec = create_channel_name(t.name)
+    t.send_channel = love.thread.getChannel(send)
+    t.receive_channel = love.thread.getChannel(rec)
+    t.custom_channels = {}
 
     return t
 end
@@ -56,7 +49,7 @@ end
 function Thread:new_channel(channel)
     local send, rec
     if type(channel) == 'string' then
-        send, rec = create_custom_channel_name(self.name, channel)
+        send, rec = create_channel_name(self.name, channel)
     else
         send, rec = channel[1], channel[2]
     end
@@ -71,7 +64,7 @@ end
 ---@return Thread
 ---@private
 function Thread:send_on(payload, channel)
-    local send, rec = create_custom_channel_name(self.name, channel)
+    local send, rec = create_channel_name(self.name, channel)
     if not self.custom_channels[send] then
         self:new_channel({send, rec})
     end
@@ -93,11 +86,11 @@ end
 
 ---@private
 function Thread:receive_on(channel)
-    local send, rec = create_custom_channel_name(self.name, channel)
-    if not self[rec] then
+    local send, rec = create_channel_name(self.name, channel)
+    if not self.custom_channels[rec] then
         self:new_channel({send, rec})
     end
-    return self[rec]:pop()
+    return self.custom_channels[rec]:pop()
 end
 
 ---Polls either the main thread channel or, if provided, a custom channel for a message

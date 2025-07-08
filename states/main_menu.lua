@@ -1,18 +1,17 @@
-local menu_private = {
-    Elements = {},
-    Text = {},
-}
-local menu = {}
+local StateBase = require('states.state_base')
+
+---@class Menu: StateBase
+---@field private debugText Text
+local Menu = Inherit(StateBase)
 
 local UI = require('ui.prelude')
-local Globals = require('util.globals')
-local Input = require('input')
 
-function menu.load()
-    menu_private.debugText = UI.Text:new{
+function Menu:new()
+    local menu = StateBase.new(self)
+    menu.debugText = UI.Text:new{
         content = 'MENU'
     }
-    table.insert(menu_private.Elements, UI.Text:new({
+    table.insert(menu.Elements, UI.Text:new({
         content = 'BepisBee',
         alignX = UI.Align.X.CENTER,
         y = 50,
@@ -20,7 +19,7 @@ function menu.load()
         color = UI.Color.yellow,
         shadow = UI.Text.Shadow.Large,
     }))
-    table.insert(menu_private.Elements, UI.FlexBox:new({
+    table.insert(menu.Elements, UI.FlexBox:new({
         receiveInput = true,
         alignCentered = true,
         y = 100,
@@ -72,35 +71,19 @@ function menu.load()
             })
         }
     }))
+    return menu
 end
 
-function menu.keypressed()
-    if Globals.Debug then
-        -- Util.print_r(Input)
-    end
+function Menu:keypressed()
     if Input.ESC() then
-        --love.event.push('quit')
         PushEvent('quit')
         return
     end
-    for _, elem in pairs(menu_private.Elements) do
-        if elem.receiveInput and elem.propagateInput then
-            elem:propagateInput(Input.State({ignore = {'ESC'}}), 'key')
-        end
+    local i = Input.State({ignore = {'ESC'}})
+    -- Print_r(i)
+    for _, elem in pairs(self.Elements) do
+        elem:propagateInput(i, 'key')
     end
 end
 
-function menu.update(dt)
-
-end
-
-function menu.draw()
-    if Globals.Debug then
-        menu_private.debugText:draw()
-    end
-    for _, ui in pairs(menu_private.Elements) do
-        ui:draw()
-    end
-end
-
-return menu
+return Menu

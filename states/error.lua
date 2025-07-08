@@ -1,23 +1,26 @@
 local UI = require('ui.prelude')
 local Input = require('input')
+local StateBase = require('states.state_base')
 
-local error_ = {}
-local error = {}
+---@class Error: StateBase
+---@field private message Text
+local Error = Inherit(StateBase)
 
-function error.load()
-    error_.message = UI.Text:new({
+function Error:new()
+    local error = StateBase.new(self)
+    error.message = UI.Text:new({
         id = 'error-text',
         color = UI.Color.red,
         size = UI.Text.Size.Large,
         shadow = UI.Text.Shadow.Medium,
         alignCentered = true,
     })
-    error_.Elements = {
+    error.Elements = {
         UI.FlexBox:new({
             alignCentered = true,
             direction = UI.FlexDirection.VERTICAL,
             elements = {
-                error_.message,
+                error.message,
                 UI.Text:new({
                     content = 'Press any key to exit to the main menu',
                     size = UI.Text.Size.Small,
@@ -29,20 +32,14 @@ function error.load()
     }
 end
 
-function error.onEnter(message)
-    error_.message:setContent(message)
+function Error:onEnter(message)
+    self.message:setContent(message)
 end
 
-function error.keypressed()
+function Error:keypressed()
     if Input.AnyKeyPressed() then
-        love.event.push('scenechange', 'MAIN_MENU')
+        PushEvent('scenechange', 'MAIN_MENU')
     end
 end
 
-function error.draw()
-    for _, elem in pairs(error_.Elements) do
-        elem:draw()
-    end
-end
-
-return error
+return Error

@@ -96,6 +96,7 @@ local function propagateInput(self, input, inputType)
     self.elements[self.selectedElement].selected = true
 end
 
+---@overload fun(self: FlexBox, input_: [InputStateValue], inputType: 'key')
 function FlexBox:propagateInput(input_, inputType)
     for _, input in ipairs(input_) do
         propagateInput(self, input, inputType)

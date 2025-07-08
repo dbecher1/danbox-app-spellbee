@@ -5,21 +5,20 @@ local lobby = require('states.lobby')
 local countdown = require('states.countdown')
 local error = require('states.error')
 local gameplay_loop = require('states.gameplay_loop')
+local StateBase = require('states.state_base')
 
 -- I NEED TO DECIDE IF I WANT TO CALL THESE SCENES OR STATES............... HELP ME LOL
 
----@enum StateEnum
-local stateEnum = {
-    SPLASH = 1,
-    MAIN_MENU = 2,
-    LOBBY = 3,
-    LOADING = 4,
-    COUNTDOWN = 5,
-    ERROR = 6,
-    GAMEPLAY_LOOP = 7,
+---@enum GameState
+local GameState = {
+    MAIN_MENU = 1,
+    LOBBY = 2,
+    LOADING = 3,
+    COUNTDOWN = 4,
+    ERROR = 5,
+    GAMEPLAY_LOOP = 6,
 }
-local state_private = {
-    {},
+local states_ = {
     main_menu,
     lobby,
     loading,
@@ -28,24 +27,27 @@ local state_private = {
     gameplay_loop,
 }
 
-local state = {}
-state.currentState = stateEnum.MAIN_MENU
-state.StateEnum = stateEnum
+---@class StateMachine
+---@field gameStates StateBase[]
+---@field currentState GameState
+local StateMachine = {}
 
-function state.load()
-    for _, scene in ipairs(state_private) do
-        if scene.load then
-            scene.load()
-        end
+function StateMachine:new()
+    local state = StateBase.new(self)
+    state.gameStates = {}
+    for i, s in ipairs(states_) do
+        state.gameStates[i] = s:new()
     end
+    self.currentState = GameState.MAIN_MENU
+    return state
 end
 
-function state.handleSceneChange(scene, arg1, arg2)
-    local lastState = state.currentState
+function StateMachine:handleSceneChange(scene, arg1, arg2)
+    local lastState = self.currentState
 
     if Globals.Debug then
         local lastStateStr = 'UNDEFINED'
-        for k, v in pairs(stateEnum) do
+        for k, v in pairs(GameState) do
             if v == lastState then
                 lastStateStr = k
                 break
@@ -54,35 +56,26 @@ function state.handleSceneChange(scene, arg1, arg2)
         print('\nScene transition:\nLeaving: ' .. lastStateStr .. '\nEntering: ' .. scene .. '\n')
     end
 
-    state.currentState = stateEnum[scene]
-    if state_private[state.currentState].onEnter then
-        state_private[state.currentState].onEnter(arg1, arg2)
-    end
-    if state_private[lastState].onLeave then
-        state_private[lastState].onLeave(arg1)
-    end
+    self.currentState = GameState[scene]
+
+    self.gameStates[self.currentState]:onEnter(arg1, arg2)
+    self.gameStates[lastState]:onLeave(arg1)
 end
 
-function state.update(dt)
-    if state_private[state.currentState].update then
-        state_private[state.currentState].update(dt)
-    end
+function StateMachine:update(dt)
+    self.gameStates[self.currentState]:update(dt)
 end
 
-function state.keypressed()
-    if state_private[state.currentState].keypressed then
-        state_private[state.currentState].keypressed()
-    end
+function StateMachine:keypressed()
+    self.gameStates[self.currentState]:keypressed()
 end
 
-function state.keyreleased(scancode)
-    if state_private[state.currentState].keyreleased then
-        state_private[state.currentState].keyreleased()
-    end
+function StateMachine:keyreleased(scancode)
+    self.gameStates[self.currentState]:keyreleased()
 end
 
-function state.draw()
-    state_private[state.currentState].draw()
+function StateMachine:draw()
+    self.gameStates[self.currentState]:draw()
 end
 
-return state
+return StateMachine

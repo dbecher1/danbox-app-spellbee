@@ -12,9 +12,9 @@ local text_private = {
 ---@field inner_state love.Text
 ---@field shadow Shadow
 ---@field borderSize number
----@
-
+---@field color Color
 local Text = Inherit(Component)
+
 local font_path = 'assets/fonts/Kenney Future.ttf'
 
 ---@enum TextSize
@@ -68,7 +68,16 @@ function Text:new(t)
 
     t.inner_state = love.graphics.newText(text_private.Font[size], content)
 
-    t.shadow = t.shadow or Shadow.None
+    -- you can pass shadow = true to have the shadow size match the text size
+    if type(t.shadow) == 'boolean' then
+        if t.shadow then
+            t.shadow = size
+        else
+            t.shadow = Shadow.None
+        end
+    else
+        t.shadow = t.shadow or Shadow.None
+    end
     t.borderSize = t.borderSize or 0
 
     return t
@@ -80,7 +89,7 @@ function Text:find(id)
     end
 end
 
----@param content string
+---@param content any
 function Text:setContent(content)
     if type(content) ~= 'string' then
         content = tostring(content)

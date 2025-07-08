@@ -1,39 +1,42 @@
-local loading_private = {
-    Elements = {},
-}
-local loading = {}
 local Input = require('input')
 local Globals = require('util.globals')
 local UI = require('ui.prelude')
 local json = require('util.json')
 local Thread = require('network.thread')
+local StateBase = require('states.state_base')
 
-function loading.load()
-    loading_private.text = UI.Text:new({
+---@class Loading: StateBase
+---@field private text Text
+local Loading = Inherit(StateBase)
+
+function Loading:new()
+    local loading = StateBase.new(self)
+    loading.text = UI.Text:new({
         content = 'LOADING...'
     })
+    return loading
 end
-function loading.onEnter()
-    loading_private.req_thread = Thread:new({
+function Loading:onEnter()
+    self.req_thread = Thread:new({
         name = 'request_code',
         path = 'network/request_code.lua'
     }):start(Globals.GameID)
 end
 
-function loading.onLeave()
-    if loading_private.req_thread:is_running() then
-        loading_private.req_thread:stop()
+function Loading:onLeave()
+    if self.req_thread:is_running() then
+        self.req_thread:stop()
     end
 end
 
-function loading.keypressed()
+function Loading:keypressed()
     if Input.ESC() then
         PushEvent('scenechange', 'MAIN_MENU')
     end
 end
 
-function loading.update(dt)
-    local result = loading_private.req_thread:receive()
+function Loading:update(dt)
+    local result = self.req_thread:receive()
     if result then
         if result.status == 'ERROR' then
             -- server error
@@ -46,8 +49,8 @@ function loading.update(dt)
     end
 end
 
-function loading.draw()
-    loading_private.text:draw()
+function Loading:draw()
+    self.text:draw()
 end
 
-return loading
+return Loading

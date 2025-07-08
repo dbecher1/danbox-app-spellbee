@@ -32,82 +32,101 @@
 -- End of game
 
 local Thread = require('network.thread')
+local StateBase = require('states.state_base')
 local grade_intro = require('states.game.grade_intro')
 local guess_round = require('states.game.guess_round')
 
-local GameplayStates = {
-    TUTORIAL = 1,
-    GRADE_INTRO = 2,
-    GUESS_ROUND = 3,
+---@alias GameStateObject {
+---starting_grade: integer,
+---players: table<string, PlayerState>,
+---network_thread: Thread,
+---words: WordBank,
+---current_grade: integer,
+---current_word: string?,
+---current_player: string?}
+
+---@enum GameplayState
+local GameplayState = {
+    GRADE_INTRO = 1,
+    GUESS_ROUND = 2,
 }
 
-local private = {
-    Elements = {},
-}
+---@class GameplayLoop
+---@field gameplay_states GameLoopStateBase[]
+---@field currentState GameplayState
+---@field gamestate GameStateObject
+local GameplayLoop = Inherit(StateBase)
 
-private.gameplay_states = {
-    {},
-    grade_intro,
-    guess_round,
-}
-
-local state = {}
-state.currentState = -1
-
-function state.load()
-    for _, scene in ipairs(private.gameplay_states) do
-        if scene.load then
-            scene.load()
-        end
+function GameplayLoop:new()
+    local gameplay = StateBase.new(self)
+    local gameplay_states = {
+        grade_intro,
+        guess_round,
+    }
+    gameplay.gameplay_states = {}
+    for i, state in ipairs(gameplay_states) do
+        gameplay.gameplay_states[i] = state:new()
     end
+    gameplay.currentState = GameplayState.GRADE_INTRO
+    gameplay.gamestate = {}
+    return gameplay
 end
 
-function state.onEnter(gamestate)
+---comment
+---@param gamestate GameStateObject
+function GameplayLoop:onEnter(gamestate)
     -- in the future we can specify what grade we start
     -- let's start for now at 5th grade
     gamestate.starting_grade = 5
+    gamestate.current_grade = gamestate.starting_grade
     gamestate.network_thread = Thread:rehydrate(gamestate.network_thread)
-    private.gamestate = gamestate
-    private.currentState = GameplayStates.GRADE_INTRO
-    private.gameplay_states[private.currentState].onEnter(gamestate.starting_grade)
-end
+    self.gamestate = gamestate
 
-function state.onLeave()
-
-end
-
-function state.transition(to)
-
-end
-
-function state.keypressed()
-    if private.gameplay_states[private.currentState].keypressed then
-        private.gameplay_states[private.currentState].keypressed()
+    -- TODO: eventually populate the players field with real players...
+    if false then
+        self.gamestate.players = {
+        johnny = {
+            connected = true,
+            score = 0,
+        },
+        bill = {
+            connected = true,
+            score = 0
+        },
+        briantreumente = {
+            connected = true,
+            score = 0
+        }
+    }
     end
+
+    self.currentState = GameplayState.GRADE_INTRO
+    self.gameplay_states[self.currentState]:onEnter(gamestate.starting_grade)
 end
 
-function state.update(dt)
-    if private.gameplay_states[private.currentState].update then
-        private.gameplay_states[private.currentState].update(dt)
-    end
-    local e
-    if private.gameplay_states[private.currentState].poll then
-        e = private.gameplay_states[private.currentState].poll()
-    end
+function GameplayLoop:keypressed()
+    self.gameplay_states[self.currentState]:keypressed()
+end
+
+function GameplayLoop:update(dt)
+    self.gameplay_states[self.currentState]:update(dt)
+    local e = self.gameplay_states[self.currentState]:poll_event()
     if e then
         if e == 'next' then
-            print('NEXTU')
+            local last_state = self.currentState
+            if self.currentState == GameplayState.GRADE_INTRO then
+                self.currentState = GameplayState.GUESS_ROUND
+                self.gameplay_states[self.currentState]:onEnter(self.gamestate)
+            end
+            self.gameplay_states[last_state]:onLeave()
         end
     end
 end
 
-function state.draw()
-    private.gameplay_states[private.currentState].draw()
-
+function GameplayLoop:draw()
+    self.gameplay_states[self.currentState]:draw()
     -- Keep this element draw in case we want anything commonly drawn across states
-    for _, elem in pairs(private.Elements) do
-        elem:draw()
-    end
+    StateBase.draw(self)
 end
 
-return state
+return GameplayLoop

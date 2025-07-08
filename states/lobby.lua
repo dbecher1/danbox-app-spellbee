@@ -1,15 +1,23 @@
----@diagnostic disable: undefined-field
-
 local Input = require('input')
 local UI = require('ui.prelude')
 local Globals = require('util.globals')
 local tts = require('util.tts')
 local Thread = require('network.thread')
+local StateBase = require('states.state_base')
 
-local lobby_private = {
-    Elements = {},
-}
-local lobby = {}
+---@alias PlayerState {connected: boolean, score: integer}
+
+---@class Lobby: StateBase
+---@field private heartbeatTimer number
+---@field private players table<string, PlayerState>
+---@field private ready boolean
+---@field private label Text
+---@field private player_text FlexBox
+---@field private escape_text Text
+---@field private start_text Text
+---@field private code string?
+---@field private network_thread Thread
+local Lobby = Inherit(StateBase)
 
 -- Socket.IO uses a rate of 25s so hey here we are
 local HEARTBEAT_RATE = 25 -- seconds
@@ -18,31 +26,27 @@ local HEARTBEAT_RATE = 25 -- seconds
 -- will be 3 in the future, 1 now for dev
 local MINIMUM_PLAYERS = 0
 
-function lobby.load()
+function Lobby:new()
+    local lobby = StateBase.new(self)
     -- some stateful variables first
-    lobby_private.heartbeatTimer = 0
+    lobby.heartbeatTimer = 0
     -- lobby_private.player_count = 0
-    lobby_private.players = {}
-    lobby_private.ready = true -- SET THIS BACK TO FALSE
+    lobby.players = {}
+    lobby.ready = true -- SET THIS BACK TO FALSE
 
-    lobby_private.debugText = UI.Text:new({
-        content = 'LOBBY',
-        alignX = UI.Align.X.RIGHT,
-    })
-
-    lobby_private.label = UI.Text:new({
+    lobby.label = UI.Text:new({
         id = 'roomcode',
         shadow = UI.Text.Shadow.Medium,
         color = {1, 1, 0.2},
         size = UI.Text.Size.Large,
     })
 
-    lobby_private.player_text = UI.FlexBox:new({
+    lobby.player_text = UI.FlexBox:new({
         direction = UI.FlexDirection.VERTICAL,
         gap = 2,
     })
 
-    lobby_private.escape_text = UI.Text:new({
+    lobby.escape_text = UI.Text:new({
         id = 'escape-text',
         shadow = UI.Text.Shadow.Small,
         content = 'Press Escape to Close Lobby',
@@ -50,7 +54,7 @@ function lobby.load()
         size = UI.Text.Size.Small
     })
 
-     lobby_private.start_text = UI.Text:new({
+     lobby.start_text = UI.Text:new({
         id = 'start-text',
         shadow = UI.Text.Shadow.Medium,
         content = 'Press Enter to Start',
@@ -59,7 +63,7 @@ function lobby.load()
         active = false,
     })
 
-    table.insert(lobby_private.Elements,
+    table.insert(lobby.Elements,
         UI.FlexBox:new({
             x = 10,
             y = 10,
@@ -70,76 +74,79 @@ function lobby.load()
                     shadow = UI.Text.Shadow.Medium,
                     size = UI.Text.Size.Large,
                 }),
-                lobby_private.label,
-                lobby_private.player_text,
+                lobby.label,
+                lobby.player_text,
             }
         })
     )
 
-    table.insert(lobby_private.Elements, lobby_private.escape_text)
-    table.insert(lobby_private.Elements, lobby_private.start_text)
-end
-
-function lobby.onEnter(code)
-    lobby_private.code = code
-    lobby_private.label:setContent(code)
-    lobby_private.network_thread = Thread:new({
+    table.insert(lobby.Elements, lobby.escape_text)
+    table.insert(lobby.Elements, lobby.start_text)
+    lobby.network_thread = Thread:new({
         name = 'network',
         path = 'network/network_thread.lua'
-    }):start(Globals.GameID, code)
-
-    tts.speak_many('Welcome to the game', 'I love you')
+    })
+    return lobby
 end
 
-function lobby.onLeave(next_state)
+---@param code string
+function Lobby:onEnter(code)
+    self.code = code
+    self.label:setContent(code)
+    self.network_thread:start(Globals.GameID, code)
+
+    tts.speak_many('Welcome to the game')
+end
+
+function Lobby:onLeave(next_state)
     -- if going back to the menu, terminate the network thread
     -- obviously if we advance in the game we want it to persist
     if next_state == 'MAIN_MENU' then
-        lobby_private.network_thread:stop()
+        self.network_thread:stop()
     end
 
-    lobby_private.code = nil
-    lobby_private.label:setContent('')
-    lobby_private.player_text:clear()
-    lobby_private.players = {}
-    -- lobby_private.ready = false
+    self.code = nil
+    self.label:setContent('')
+    self.player_text:clear()
+    self.players = {}
+    -- lobby_private.ready = false -- TODO: RESET ME
 end
 
-function lobby.keypressed()
+function Lobby:keypressed()
     if tts.is_speaking() then return end
     if Input.ESC() then
         PushEvent('scenechange', 'MAIN_MENU', 'MAIN_MENU')
     end
-    if Input.ACTION() and lobby_private.ready then
-        PushEvent('scenechange', 'COUNTDOWN', lobby_private.players, lobby_private.network_thread)
+    if Input.ACTION() and self.ready then
+        PushEvent('scenechange', 'COUNTDOWN', self.players, self.network_thread)
     end
 end
 
-function lobby.update(dt)
-    lobby_private.heartbeatTimer = lobby_private.heartbeatTimer + dt
-    local last_ready_state = lobby_private.ready
+function Lobby:update(dt)
+    self.heartbeatTimer = self.heartbeatTimer + dt
+    local last_ready_state = self.ready
 
-    if lobby_private.heartbeatTimer >= HEARTBEAT_RATE then
+    if self.heartbeatTimer >= HEARTBEAT_RATE then
         --love.thread.getChannel('to-network'):push('heartbeat')
-        lobby_private.network_thread:send('heartbeat')
-        lobby_private.heartbeatTimer = 0
+        self.network_thread:send('heartbeat')
+        self.heartbeatTimer = 0
     end
 
-    local e = lobby_private.network_thread:receive()
+    local e = self.network_thread:receive()
 
     if e then
         if e.event == 'player_join' then
             print('Main thread received player join event')
 
-            lobby_private.player_text:append_text(e.username, 'player-'..e.username)
-            lobby_private.players[e.username] = {
+            self.player_text:append_text(e.username, 'player-'..e.username)
+            self.players[e.username] = {
                 connected = true,
                 score = 0,
             }
             --lobby_private.player_count = lobby_private.player_count + 1
 
-            if #lobby_private.players >= MINIMUM_PLAYERS then
-                lobby_private.ready = true
+            if #self.players >= MINIMUM_PLAYERS then
+                self.ready = true
             end
 
             tts.speak('We have a new player in the lobby. Give it up for ' .. e.username .. '!')
@@ -147,28 +154,20 @@ function lobby.update(dt)
         elseif e.event == 'player_leave' then
             print('Main thread received player leave event')
 
-            lobby_private.player_text:remove('player-'..e.username)
-            lobby_private.players[e.username] = nil
+            self.player_text:remove('player-'..e.username)
+            self.players[e.username] = nil
             -- lobby_private.player_count = lobby_private.player_count - 1
-            if #lobby_private.players < MINIMUM_PLAYERS then
-                lobby_private.ready = false
+            if #self.players < MINIMUM_PLAYERS then
+                self.ready = false
             end
 
             tts.speak('Farewell, ' .. e.username)
         end
     end
-    if last_ready_state ~= lobby_private.ready then
-        lobby_private.start_text:set_active(lobby_private.ready)
+
+    if last_ready_state ~= self.ready then
+        self.start_text:set_active(self.ready)
     end
 end
 
-function lobby.draw()
-    if Globals.Debug then
-        lobby_private.debugText:draw()
-    end
-    for _, elem in pairs(lobby_private.Elements) do
-        elem:draw()
-    end
-end
-
-return lobby
+return Lobby
