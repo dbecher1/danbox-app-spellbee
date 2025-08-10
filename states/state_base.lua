@@ -27,7 +27,6 @@ function state:update(dt) end
 
 function state:draw()
     for _, elem in pairs(self.Elements) do
----@diagnostic disable-next-line: undefined-field
         elem:draw()
     end
     if state.debugText then

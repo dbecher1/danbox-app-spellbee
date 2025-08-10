@@ -40,12 +40,18 @@ function Intro:new()
     return intro
 end
 
----@param grade integer
-function Intro:onEnter(grade)
-    local gradeStr = self.gen_grade_str(grade)
+---@param state GameStateObject
+function Intro:onEnter(state)
+    local gradeStr = self.gen_grade_str(state.current_grade)
     self.grade_label:setContent(gradeStr)
     tts.after_speak_many(
-        function() self:push_event('next') end,
+        function()
+            self:push_event('next')
+            state.network_thread:send({
+                event = 'roundstart',
+                grade = state.current_grade
+            })
+        end,
         'Congratulations!', 'You are now entering', gradeStr
     )
 end

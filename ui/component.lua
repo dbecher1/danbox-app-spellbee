@@ -2,6 +2,8 @@
 
 local Align = require('ui.align')
 
+
+
 ---@class Component
 ---@field id string
 ---@field x number
@@ -10,6 +12,7 @@ local Align = require('ui.align')
 ---@field alignX AlignX
 ---@field alignY AlignY
 ---@field active boolean
+---@field parent Component?
 local Component = {}
 
 local component_ids = {}
@@ -84,5 +87,14 @@ function Component:receiveInput()
 end
 
 function Component:propagateInput(input, type) end
+
+---@return 'component' | 'flexbox' | 'button' | 'text'
+function Component:component_type()
+    return 'component'
+end
+
+function Component:draw(arg1, arg2)
+    assert(false, 'Draw function undefined for component')
+end
 
 return Component

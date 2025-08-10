@@ -35,6 +35,7 @@ local Thread = require('network.thread')
 local StateBase = require('states.state_base')
 local grade_intro = require('states.game.grade_intro')
 local guess_round = require('states.game.guess_round')
+local scoreboard = require('states.game.scoreboard')
 
 ---@alias GameStateObject {
 ---starting_grade: integer,
@@ -43,12 +44,15 @@ local guess_round = require('states.game.guess_round')
 ---words: WordBank,
 ---current_grade: integer,
 ---current_word: string?,
----current_player: string?}
+---current_player: string?,
+---winner: string?,
+---}
 
 ---@enum GameplayState
 local GameplayState = {
     GRADE_INTRO = 1,
     GUESS_ROUND = 2,
+    SCOREBOARD = 3,
 }
 
 ---@class GameplayLoop
@@ -62,6 +66,7 @@ function GameplayLoop:new()
     local gameplay_states = {
         grade_intro,
         guess_round,
+        scoreboard,
     }
     gameplay.gameplay_states = {}
     for i, state in ipairs(gameplay_states) do
@@ -99,9 +104,12 @@ function GameplayLoop:onEnter(gamestate)
         }
     }
     end
+    local s = self.gameplay_states[GameplayState.SCOREBOARD]
+    ---@cast s Scoreboard
+    s:loadPlayers(Table.keyset(gamestate.players))
 
     self.currentState = GameplayState.GRADE_INTRO
-    self.gameplay_states[self.currentState]:onEnter(gamestate.starting_grade)
+    self.gameplay_states[self.currentState]:onEnter(gamestate)
 end
 
 function GameplayLoop:keypressed()
@@ -116,9 +124,20 @@ function GameplayLoop:update(dt)
             local last_state = self.currentState
             if self.currentState == GameplayState.GRADE_INTRO then
                 self.currentState = GameplayState.GUESS_ROUND
-                self.gameplay_states[self.currentState]:onEnter(self.gamestate)
+            elseif self.currentState == GameplayState.GUESS_ROUND then
+                -- check the grade level here - if it's a certain level, show the scoreboard
+                local scoreboard_grades = {6, 9, 11, 12}
+                if Table.array_contains(scoreboard_grades, self.gamestate.current_grade) then
+                    self.currentState = GameplayState.SCOREBOARD
+                else
+                    self.currentState = GameplayState.GRADE_INTRO
+                end
+                self.gamestate.current_grade = self.gamestate.current_grade + 1
+            elseif self.currentState == GameplayState.SCOREBOARD then
+                self.currentState = GameplayState.GRADE_INTRO
             end
             self.gameplay_states[last_state]:onLeave()
+            self.gameplay_states[self.currentState]:onEnter(self.gamestate)
         end
     end
 end

@@ -1,4 +1,3 @@
-local Util = require('util.mod')
 local Text = require('ui.text')
 local Align = require('ui.align')
 local Component = require('ui.component')
@@ -90,8 +89,8 @@ function Button:getDimensions()
     return button_private[sprite]:getDimensions()
 end
 
-function Button:update(dt)
-
+function Button:component_type()
+    return 'button'
 end
 
 function Button:draw(offset, parentDim)

@@ -7,6 +7,8 @@ local Thread = require('network.thread')
 ---@field private callback_queue table<string, function>
 local tts = {}
 
+local message = 0
+
 function tts.load()
 	tts_engine.init()
 	tts.thread = Thread:new({
@@ -23,7 +25,11 @@ end
 ---Sends text to the engine to speak
 ---@param data any
 function tts.speak(data)
-	tts.thread:send(data)
+	tts.thread:send({
+		data = data,
+		n = message
+	})
+	message = message + 1
 end
 
 ---Sends text to the engine to speak, calling a callback function on completion of the speech
@@ -31,7 +37,8 @@ end
 ---@param fn function
 function tts.speak_then(data, fn)
 	tts.callback_queue[data] = fn
-	tts.thread:send(data, 'cb')
+	tts.thread:send({data = data, n = message}, 'cb')
+	message = message + 1
 end
 
 ---Naming things is very hard. This function takes an array of string function tuples, and executes them in turn. The function can be nil for flexibility (if you want a non-callback executed in between two callbacks)

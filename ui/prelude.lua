@@ -5,12 +5,15 @@ local text = require('ui.text')
 local align = require('ui.align')
 local flexBox = require('ui.flexbox')
 local color = require('ui.color')
+local grid = require('ui.grid')
 
 UI.Button = button
 UI.Text = text
 UI.Align = align
 UI.FlexBox = flexBox
 UI.Color = color
+UI.Grid = grid
+UI.Container = require 'ui.container'
 
 UI.ButtonColorVariant = button.colorVariant
 UI.FlexDirection = flexBox.Direction

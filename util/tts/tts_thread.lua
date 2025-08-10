@@ -1,6 +1,8 @@
 local tts_engine = require('util.tts.engine')
 local timer = require('love.timer')
 
+local messages = {}
+
 local function speak(data)
     if type(data) ~= 'string' then
         data = tostring(data)
@@ -16,19 +18,31 @@ end
 
 while true do
     local data = love.thread.getChannel('to-tts'):pop()
-    if data then
-        if data == '%%TERMINATE%%' then
-            break
-        end
-        speak(data)
-    else
-        -- check the callback channel
-        local data_cb = love.thread.getChannel('to-tts-cb'):pop()
-        if data_cb then
-            speak(data_cb)
-            love.thread.getChannel('from-tts-cb'):push(data_cb)
-        else
-            timer.sleep(0.01)
-        end
+    while data do
+        data.cb = false
+        table.insert(messages, data)
+        data = love.thread.getChannel('to-tts'):pop()
     end
+    local data_cb = love.thread.getChannel('to-tts-cb'):pop()
+    while data_cb do
+        --speak(data_cb)
+        data_cb.cb = true
+        table.insert(messages, data_cb)
+        data_cb = love.thread.getChannel('to-tts-cb'):pop()
+    end
+    if #messages > 0 then
+        table.sort(messages, function(lhs, rhs) return lhs.n > rhs.n end)
+        local d = table.remove(messages)
+        repeat
+            speak(d.data)
+            if d.cb then
+                love.thread.getChannel('from-tts-cb'):push(d.data)
+            end
+            d = table.remove(messages)
+        until d == nil
+    end
+    -- check the callback channel
+    timer.sleep(0.01)
+    
+    
 end

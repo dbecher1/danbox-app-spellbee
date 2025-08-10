@@ -1,6 +1,5 @@
 local Input = require('input')
 local UI = require('ui.prelude')
-local Globals = require('util.globals')
 local tts = require('util.tts')
 local Thread = require('network.thread')
 local StateBase = require('states.state_base')
@@ -24,7 +23,7 @@ local HEARTBEAT_RATE = 25 -- seconds
 
 -- minimum players required to start 
 -- will be 3 in the future, 1 now for dev
-local MINIMUM_PLAYERS = 0
+local MINIMUM_PLAYERS = 1
 
 function Lobby:new()
     local lobby = StateBase.new(self)
@@ -93,7 +92,7 @@ end
 function Lobby:onEnter(code)
     self.code = code
     self.label:setContent(code)
-    self.network_thread:start(Globals.GameID, code)
+    self.network_thread:start(GameID, code)
 
     tts.speak_many('Welcome to the game')
 end
@@ -145,8 +144,9 @@ function Lobby:update(dt)
             }
             --lobby_private.player_count = lobby_private.player_count + 1
 
-            if #self.players >= MINIMUM_PLAYERS then
+            if #self.players >= MINIMUM_PLAYERS and not self.ready then
                 self.ready = true
+                self.network_thread:send('ready')
             end
 
             tts.speak('We have a new player in the lobby. Give it up for ' .. e.username .. '!')
@@ -157,8 +157,9 @@ function Lobby:update(dt)
             self.player_text:remove('player-'..e.username)
             self.players[e.username] = nil
             -- lobby_private.player_count = lobby_private.player_count - 1
-            if #self.players < MINIMUM_PLAYERS then
+            if #self.players < MINIMUM_PLAYERS and self.ready then
                 self.ready = false
+                self.network_thread:send('notready')
             end
 
             tts.speak('Farewell, ' .. e.username)

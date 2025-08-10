@@ -1,7 +1,6 @@
 local Component = require('ui.component')
 local Align = require('ui.align')
 local Text = require('ui.text')
-local Util = require('util.mod')
 
 ---@class FlexBox: Component
 ---@field gap number
@@ -39,6 +38,10 @@ function FlexBox:new(fb)
     fb.receiveInput = fb.receiveInput or false
     fb.calculateDimensions(fb)
     return fb
+end
+
+function FlexBox:component_type()
+    return 'flexbox'
 end
 
 -- Given a tag/id, tries to find that element and returns it and its index, or nil if it can't
@@ -112,6 +115,9 @@ function FlexBox:calculateDimensions()
         return
     end
     for _, elem in pairs(self.elements) do
+        if type(elem) == 'table' and not elem.parent then
+            elem.parent = self
+        end
         mainAxis = mainAxis + self.gap
         local w, h = elem:getDimensions()
         if self.direction == Direction.HORIZONTAL then
@@ -192,7 +198,6 @@ function FlexBox:draw(offset, parentDim)
         drawPos[2] = drawPos[2] + boundsH - self.dimensions[2]
     end
     for _, elem in pairs(self.elements) do
----@diagnostic disable-next-line: undefined-field
         elem:draw(drawPos, self.dimensions)
         local ew, eh = elem:getDimensions()
         if self.direction == Direction.HORIZONTAL then

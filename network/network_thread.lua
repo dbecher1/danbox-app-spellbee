@@ -1,8 +1,7 @@
 local websocket = require('network.websocket')
 local json = require("util.json")
-local Globals = require('util.globals')
 local timer = require('love.timer')
-local print_r = require('util.print_r').print_r
+require('util.globals')
 
 local id, roomcode = ...
 local message = 0
@@ -65,7 +64,7 @@ function phx.msg(e, args)
     return outStr
 end
 
-local client = websocket.new(Globals.HOST, Globals.PORT, Globals.PATH)
+local client = websocket.new(WEB_HOST, WEB_PORT, WEB_PATH)
 
 function client:onmessage(msg)
     -- print_r(msg)
@@ -122,37 +121,60 @@ while run do
     client:update()
     local e = love.thread.getChannel('to-network'):pop()
     if e then
-        -- print(e)
+        local msg
+
         if e == 'stop' then
             run = false
             client:close()
+
         elseif e == 'heartbeat' then
-            -- print('Heartbeat sent')
-            client:send(phx.msg())
+
+            msg = phx.msg()
+
         elseif e == 'gamestart' then
-            client:send(phx.msg(phx.event, {
+            msg = phx.msg(phx.event, {
                 name = 'gamestart'
-            }))
+            })
+
+        elseif e == 'ready' then
+            msg = phx.msg(phx.event, {
+                name = 'ready'
+            })
+
+        elseif e == 'notready' then
+            msg = phx.msg(phx.event, {
+                name = 'notready'
+            })
+
         elseif type(e) == 'table' then
             if e.event == 'getwords' then
-                local msg = phx.msg(phx.event, {
+                msg = phx.msg(phx.event, {
                     name = 'getwords',
                     payload = {
                         player_count = e.player_count,
                         grade = e.grade,
                     }
                 })
-                -- print(msg)
-                client:send(msg)
+
             elseif e.event == 'turnstart' then
-                local msg = phx.msg(phx.event, {
+                msg = phx.msg(phx.event, {
                     name = 'turnstart',
                     payload = {
                         player = e.player
                     }
                 })
-                client:send(msg)
+
+            elseif e.event == 'roundstart' then
+                msg = phx.msg(phx.event, {
+                    name = 'roundstart',
+                    payload = {
+                        grade = e.grade
+                    }
+                })
             end
+        end
+        if msg then
+            client:send(msg)
         end
     end
     timer.sleep(0.005)

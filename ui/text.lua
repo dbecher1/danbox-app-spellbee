@@ -1,4 +1,3 @@
-local Util = require('util.mod')
 local Align = require('ui.align')
 local Component = require('ui.component')
 local Color = require('ui.color')
@@ -13,6 +12,7 @@ local text_private = {
 ---@field shadow Shadow
 ---@field borderSize number
 ---@field color Color
+---@field content string
 local Text = Inherit(Component)
 
 local font_path = 'assets/fonts/Kenney Future.ttf'
@@ -64,9 +64,13 @@ function Text:new(t)
     end
 
     local content = t.content or ''
-    t.content = nil
+
+    --local w, _ = love.graphics.getDimensions()
+    --local parent_width = t.parent_width or w
 
     t.inner_state = love.graphics.newText(text_private.Font[size], content)
+    --t.inner_state = love.graphics.newText(text_private.Font[size])
+    --t.inner_state:setf(content, parent_width, 'center')
 
     -- you can pass shadow = true to have the shadow size match the text size
     if type(t.shadow) == 'boolean' then
@@ -83,9 +87,20 @@ function Text:new(t)
     return t
 end
 
+function Text:component_type()
+    return 'text'
+end
+
 function Text:find(id)
     if self.id == id then return self
     else return nil
+    end
+end
+
+---@param color string
+function Text:setColor(color)
+    if type(color) == 'string' and Color[color] then
+        self.color = Color[color]
     end
 end
 
@@ -95,6 +110,16 @@ function Text:setContent(content)
         content = tostring(content)
     end
     self.inner_state:set(content)
+    self.content = content
+    if self.parent and self.parent:component_type() == 'flexbox' then
+---@diagnostic disable-next-line: undefined-field
+        self.parent:calculateDimensions()
+    end
+end
+
+---@return string
+function Text:getContent()
+    return self.content
 end
 
 ---@diagnostic disable-next-line: duplicate-set-field
@@ -111,7 +136,7 @@ function Text:draw(offset, parentDim)
         x = self.x + offset[1],
         y = self.y + offset[2],
     }
-    local r, g, b, a = love.graphics.getColor()
+    PushColor()
     love.graphics.setColor(self.color or {1, 1, 1})
     --love.graphics.setColor{1, 1, 1}
     local boundsW, boundsH
@@ -129,7 +154,7 @@ function Text:draw(offset, parentDim)
 
     if self.alignX == Align.X.CENTER then
         -- TODO check this
-        drawPos.x = drawPos.x + (0.5 * boundsW) - (0.5 * selfSizeW)
+        drawPos.x = drawPos.x + (0.5 * boundsW) - (0.5 * selfSizeW) + 3
     elseif self.alignX == Align.X.RIGHT then
         drawPos.x = drawPos.x + boundsW - selfSizeW
     end
@@ -150,7 +175,7 @@ function Text:draw(offset, parentDim)
 
     love.graphics.draw(self.inner_state, math.floor(drawPos.x), math.floor(drawPos.y))
 
-    love.graphics.setColor(r, g, b, a)
+    PopColor()
 end
 
 return Text

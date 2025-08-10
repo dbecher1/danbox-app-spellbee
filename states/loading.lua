@@ -1,5 +1,3 @@
-local Input = require('input')
-local Globals = require('util.globals')
 local UI = require('ui.prelude')
 local json = require('util.json')
 local Thread = require('network.thread')
@@ -20,7 +18,7 @@ function Loading:onEnter()
     self.req_thread = Thread:new({
         name = 'request_code',
         path = 'network/request_code.lua'
-    }):start(Globals.GameID)
+    }):start(GameID)
 end
 
 function Loading:onLeave()

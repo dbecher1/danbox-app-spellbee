@@ -1,6 +1,6 @@
 local StateBase = require('states.state_base')
 
----@alias GameLoopEvent 'next'
+---@alias GameLoopEvent 'next' | 'end'
 
 ---@class GameLoopStateBase: StateBase
 ---@field private Event GameLoopEvent[]

@@ -11,14 +11,16 @@ function Menu:new()
     menu.debugText = UI.Text:new{
         content = 'MENU'
     }
-    table.insert(menu.Elements, UI.Text:new({
+    local titleText = UI.Text:new({
         content = 'BepisBee',
         alignX = UI.Align.X.CENTER,
         y = 50,
         size = UI.Text.Size.XL,
         color = UI.Color.yellow,
         shadow = UI.Text.Shadow.Large,
-    }))
+    })
+    table.insert(menu.Elements, titleText)
+
     table.insert(menu.Elements, UI.FlexBox:new({
         receiveInput = true,
         alignCentered = true,

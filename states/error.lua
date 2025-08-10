@@ -1,5 +1,4 @@
 local UI = require('ui.prelude')
-local Input = require('input')
 local StateBase = require('states.state_base')
 
 ---@class Error: StateBase

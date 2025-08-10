@@ -1,4 +1,3 @@
-local Globals = require('util.globals')
 local main_menu = require('states.main_menu')
 local loading = require('states.loading')
 local lobby = require('states.lobby')
@@ -6,8 +5,7 @@ local countdown = require('states.countdown')
 local error = require('states.error')
 local gameplay_loop = require('states.gameplay_loop')
 local StateBase = require('states.state_base')
-
--- I NEED TO DECIDE IF I WANT TO CALL THESE SCENES OR STATES............... HELP ME LOL
+local test_env = require('states.test_env')
 
 ---@enum GameState
 local GameState = {
@@ -17,6 +15,7 @@ local GameState = {
     COUNTDOWN = 4,
     ERROR = 5,
     GAMEPLAY_LOOP = 6,
+    TEST_ENV = 7,
 }
 local states_ = {
     main_menu,
@@ -25,6 +24,7 @@ local states_ = {
     countdown,
     error,
     gameplay_loop,
+    test_env,
 }
 
 ---@class StateMachine
@@ -39,13 +39,14 @@ function StateMachine:new()
         state.gameStates[i] = s:new()
     end
     self.currentState = GameState.MAIN_MENU
+    --self.currentState = GameState.TEST_ENV
     return state
 end
 
 function StateMachine:handleSceneChange(scene, arg1, arg2)
     local lastState = self.currentState
 
-    if Globals.Debug then
+    if Debug then
         local lastStateStr = 'UNDEFINED'
         for k, v in pairs(GameState) do
             if v == lastState then

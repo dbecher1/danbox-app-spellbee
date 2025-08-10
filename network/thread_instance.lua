@@ -1,4 +1,6 @@
 
+-- This is not used right now! May or may not ever get back to this
+
 local instance = {}
 
 local create_channel_name = require('network.channel_name')
